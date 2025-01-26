@@ -5,10 +5,65 @@ import (
 	"log"
 )
 
+type operatorType int
+
+const(
+	openBracket operatorType =iota
+	closedBracket 
+	otherOperator
+)
+
+var bracketPairs = map[rune]rune{
+	'(': ')',
+	'[': ']',
+	'{': '}',
+}
+
+type stack struct{
+	elems []rune
+}
+
+func (s *stack) push(e rune){
+	s.elems= append(s.elems,e)
+}
+
+func (s *stack) pop() *rune{
+	if len(s.elems) == 0{
+		return nil
+	}
+	e:= s.elems[len(s.elems)-1]
+	s.elems = s.elems[:len(s.elems)-1]
+	return &e
+}
+
+func getOperatorType(op rune) operatorType{
+	for o,c := range bracketPairs{
+		switch op {
+		case o:
+			return openBracket
+		case c:
+			return closedBracket
+		}
+	}
+	return otherOperator
+}
+
 // isBalanced returns whether the given expression
 // has balanced brackets.
 func isBalanced(expr string) bool {
-	panic("NOT IMPLEMENTED")
+	var s stack
+	for _,e := range expr{
+		switch getOperatorType(e) {
+		case openBracket:
+			s.push(e)
+		case closedBracket:
+			j:= s.pop()
+			if j==nil || e!=bracketPairs[*j]{
+				return false
+			}
+		}
+	}
+	return len(s.elems) == 0
 }
 
 // printResult prints whether the expression is balanced.
