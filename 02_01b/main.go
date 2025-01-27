@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 )
 
@@ -15,7 +16,16 @@ var messages = []string{
 
 // repeat concurrently prints out the given message n times
 func repeat(n int, message string) {
-	panic("NOT IMPLEMENTED")
+	c:= make(chan struct{})
+	for i:=0;i<n;i++{
+		go func(i int){
+			fmt.Println(message,i)
+			c <- struct{}{}
+		}(i)
+	}
+	for i:=0;i<n;i++{
+		<-c
+	}
 }
 
 func main() {
