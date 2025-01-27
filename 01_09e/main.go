@@ -67,6 +67,7 @@ func makePlaylist(albums [][]Song) []Song {
 		p := heap.Pop(pHeap)
 		song := p.(Song)
 		playlist = append(playlist, song)
+		fmt.Println(playlist)
 		// the next song after the max is a good candidate to look at
 		if song.SongCount < len(albums[song.AlbumCount])-1 {
 			nextSong := albums[song.AlbumCount][song.SongCount+1]
