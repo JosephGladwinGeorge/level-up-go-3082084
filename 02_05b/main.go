@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 )
 
 // setup constants
@@ -13,14 +14,20 @@ const maxOrderCount = 40
 // the total amount of drinks that the bartenders have made
 type coffeeShop struct {
 	orderCount int
-
+	orderlock sync.Mutex
+	closeshop chan struct{}
 	orderCoffee  chan struct{}
 	finishCoffee chan struct{}
 }
 
 // registerOrder ensures that the order made by the baristas is counted
 func (p *coffeeShop) registerOrder() {
+	p.orderlock.Lock()
+	defer p.orderlock.Unlock()
 	p.orderCount++
+	if p.orderCount==maxOrderCount{
+		close(p.closeshop)
+	}
 }
 
 // barista is the resource producer of the coffee shop
@@ -31,6 +38,9 @@ func (p *coffeeShop) barista(name string) {
 			p.registerOrder()
 			log.Printf("%s makes a coffee.\n", name)
 			p.finishCoffee <- struct{}{}
+		case <-p.closeshop:
+			log.Printf("%s stops working. Bye!\n", name)
+			return
 		}
 	}
 }
@@ -43,6 +53,9 @@ func (p *coffeeShop) customer(name string) {
 			log.Printf("%s orders a coffee!", name)
 			<-p.finishCoffee
 			log.Printf("%s enjoys a coffee!\n", name)
+		case <-p.closeshop:
+			log.Printf("%s leaves the shop! Bye!\n", name)
+			return
 		}
 	}
 }
@@ -51,9 +64,11 @@ func main() {
 	log.Println("Welcome to the Level Up Go coffee shop!")
 	orderCoffee := make(chan struct{}, baristaCount)
 	finishCoffee := make(chan struct{}, baristaCount)
+	closeshop:=make(chan struct{})
 	p := coffeeShop{
 		orderCoffee:  orderCoffee,
 		finishCoffee: finishCoffee,
+		closeshop: closeshop,
 	}
 	for i := 0; i < baristaCount; i++ {
 		go p.barista(fmt.Sprint("Barista-", i))
@@ -61,5 +76,6 @@ func main() {
 	for i := 0; i < customerCount; i++ {
 		go p.customer(fmt.Sprint("Customer-", i))
 	}
+	<-p.closeshop
 	log.Println("The Level Up Go coffee shop has closed! Bye!")
 }

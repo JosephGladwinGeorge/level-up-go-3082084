@@ -35,10 +35,21 @@ type auctioneer struct {
 
 // runAuction and manages the auction for all the items to be sold
 // Change the signature of this function as required
-func (a *auctioneer) runAuction() {
+func (a *auctioneer) runAuction(bids <-chan bid,doneauction chan<- struct{},itemauction chan string) {
 	for _, item := range items {
+		winner:= &bid{
+			bidderID: "",
+			amount: 0,
+		}
 		log.Printf("Opening bids for %s!\n", item)
-		panic("NOT IMPLEMENTED YET")
+		for i:=0;i<len(a.bidders);i++{
+			b :=<-bids
+			if b.amount>winner.amount{
+				winner=&b
+			}	
+		}
+		a.bidders[winner.bidderID].payBid(winner.amount)
+		log.Printf("%s goes to %s for %d",item,winner.bidderID,winner.amount)
 	}
 }
 
@@ -50,8 +61,13 @@ type bidder struct {
 
 // placeBid generates a random amount and places it on the bids channels
 // Change the signature of this function as required
-func (b *bidder) placeBid() {
-	panic("NOT IMPLEMENTED YET")
+func (b *bidder) placeBid(itemauction chan string,bids chan<- bid,doneauction <-chan struct{}) {
+	for i:=0;i<len(items);i++{
+			bids<-bid{
+				b.id,
+				getRandomAmount(b.wallet),
+			}
+	}
 }
 
 // payBid subtracts the bid amount from the wallet of the auction winner
@@ -63,6 +79,9 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	log.Println("Welcome to the LinkedIn Learning auction.")
 	bidders := make(map[string]*bidder, bidderCount)
+	itemauction:= make(chan string)
+	bids:= make(chan bid)
+	doneauction:=make(chan struct{})
 	for i := 0; i < bidderCount; i++ {
 		id := fmt.Sprint("Bidder ", i)
 		b := bidder{
@@ -70,12 +89,12 @@ func main() {
 			wallet: walletAmount,
 		}
 		bidders[id] = &b
-		go b.placeBid()
+		go b.placeBid(itemauction,bids,doneauction)
 	}
 	a := auctioneer{
 		bidders: bidders,
 	}
-	a.runAuction()
+	a.runAuction(bids,doneauction,itemauction)
 	log.Println("The LinkedIn Learning auction has finished!")
 }
 
